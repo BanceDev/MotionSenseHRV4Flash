@@ -650,7 +650,9 @@ void read_ppg_fifo_buffer(struct k_work *item)
   ppg_samples[3] = led2B[i];
   ppg_samples[4] = get_current_unix_time();
   ppg_samples[5] = global_counter;
-
+  if (sampleCount[2] != 1){
+    LOG_ERR("Samples in ppg got unexpected value: %d", sampleCount[2]);
+  }
   store_data(ppg_samples, sizeof(ppg_samples), 0);
   }
   //uint8_t test_fill_arr[4096] = {[0 ... 4095] = 1};
