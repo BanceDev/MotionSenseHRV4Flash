@@ -173,7 +173,7 @@ def counter_validity_check(df: pd.DataFrame):
         counter_columns = df.iloc[:, -1:]
         counter_arr = numpy.array(counter_columns).flatten()
         diff_arr = numpy.diff(counter_arr)
-        check_array = (diff_arr == 8) | (diff_arr == -65528)
+        check_array = (diff_arr == 5) | (diff_arr == 10) | (diff_arr == -65528)
         print("pass counter check: " + str(numpy.all(check_array)))
         print("and number of non matching samples: " + str(numpy.count_nonzero(check_array == 0)))
     except Exception as e:
@@ -227,7 +227,7 @@ def generate_csv_for_pattern(file_prefix, type_prefix: str, search_key: str, lab
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    path = "C:/Users/Devan/Downloads/motion/motion/Left_drive/"
+    path = "F:/"
 
     if len(sys.argv) >= 2:
         file_prefix = sys.argv[1]
