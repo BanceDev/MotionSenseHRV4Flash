@@ -638,42 +638,33 @@ void motion_data_timeout_handler(struct k_work *item)
 
   // start_timer();
   struct motionInfo *the_device = ((struct motionInfo *)(((char *)(item)) - offsetof(struct motionInfo, work)));
-
-  float_cast temp1[4];
-
   uint16_t pktCounter = the_device->pktCounter;
-  uint8_t magneto_first_readTemp = the_device->magneto_first_read;
+  
 
   // printk("gyro: %i \n", gyro_first_readTemp);
   uint8_t burst_tx_INT_STAT[2] = {INT_STAATUS_1 | READMASTER, SPI_FILL}; // SPI burst read holders.
-  uint16_t checkMag = 0;
+  
   uint8_t burst_tx[13] = {
       READMASTER | ACCEL_XOUT_H, SPI_FILL,
       SPI_FILL, SPI_FILL, SPI_FILL, SPI_FILL,
       SPI_FILL, SPI_FILL, SPI_FILL, SPI_FILL,
       SPI_FILL, SPI_FILL, SPI_FILL}; // Burst read acc & gyro regs (0x3B-0x48).
+                                       /**< RX buffer. */
+
+  
+
+    
   uint8_t burst_rx[23];                                           // SPI burst read holders.
   uint8_t m_tx_buf[2] = {REG_BANK_SEL | WRITEMASTER, REG_BANK_0}; /**< TX buffer. */
-  uint8_t m_rx_buf[15];                                           /**< RX buffer. */
-
-  int16_t dataReadAccX, dataReadAccY, dataReadAccZ;
-  float accelX, accelY, accelZ;
-  float dividerAcc = 0;
-
-  if (accelConfig.sensitivity == 0)
-    dividerAcc = 1.0 / 16384;
-  else if (accelConfig.sensitivity == 2)
-    dividerAcc = 1.0 / 8192;
-  else if (accelConfig.sensitivity == 4)
-    dividerAcc = 1.0 / 4096;
-  else if (accelConfig.sensitivity == 6)
-    dividerAcc = 1.0 / 2048;
-
-  // Point to register bank 0 for reading the data from sensors.
-  spiReadWriteIMU(m_tx_buf, 2, m_rx_buf, 2);
+  uint8_t m_rx_buf[15];      
+  
 
   if (magnetoConfig.isEnabled)
   {
+    uint16_t checkMag = 0;
+    uint8_t magneto_first_readTemp = the_device->magneto_first_read;
+    // Point to register bank 0 for reading the data from sensors.
+    spiReadWriteIMU(m_tx_buf, 2, m_rx_buf, 2);
     if (magneto_first_readTemp == (GYRO_SAMPLING_RATE / MAGNETO_SAMPLING_RATE) / 2)
     {
       // Checking the magnetometer status bits
@@ -702,13 +693,27 @@ void motion_data_timeout_handler(struct k_work *item)
       magnetometer_read_sample_config(MAGNETOMETER_SET_EXT_TOREAD);
   }
 
+
   // Point to register bank 0 for reading the data from sensors.
   spiReadWriteIMU(m_tx_buf, 2, m_rx_buf, 2);
-  // printf("q0=%f,q1=%f,q2=%f,q3=%f\n",
-  //   quaternionResult_1[0],quaternionResult_1[1],
-  //   quaternionResult_1[2],quaternionResult_1[3]);
+  
   if (the_device->gyro_first_read == 0)
   {
+    float_cast float_cast_arr[4];
+    int16_t dataReadAccX, dataReadAccY, dataReadAccZ;
+    float accelX, accelY, accelZ;
+    float dividerAcc = 0;
+
+    if (accelConfig.sensitivity == 0)
+      dividerAcc = 1.0 / 16384;
+    else if (accelConfig.sensitivity == 2)
+      dividerAcc = 1.0 / 8192;
+    else if (accelConfig.sensitivity == 4)
+      dividerAcc = 1.0 / 4096;
+    else if (accelConfig.sensitivity == 6)
+      dividerAcc = 1.0 / 2048;
+
+
     spiReadWriteIMU(burst_tx, 7, burst_rx, 7);
     for (int i = 0; i < 6; i++)
       blePktMotion[i] = burst_rx[i + 1];
@@ -745,9 +750,9 @@ void motion_data_timeout_handler(struct k_work *item)
     currentAccData.accz_val = accelZ;
     calculate_enmo(accelX, accelY, accelZ);
 
-    temp1[0].float_val = quaternionResult_1[0];
-    temp1[1].float_val = quaternionResult_1[1];
-    temp1[2].float_val = quaternionResult_1[2];
+    float_cast_arr[0].float_val = quaternionResult_1[0];
+    float_cast_arr[1].float_val = quaternionResult_1[1];
+    float_cast_arr[2].float_val = quaternionResult_1[2];
 
     for (uint8_t i = 0; i < 3; i++)
       quaternionResult_1[i] = 0.0;
@@ -767,11 +772,19 @@ void motion_data_timeout_handler(struct k_work *item)
     // int16_t accel_and_gyro[9] = {dataReadAccX, dataReadAccY, dataReadAccZ, dataReadGyroX, dataReadGyroY, dataReadGyroZ, global_counter};
     // memcpy(&accel_and_gyro[7], &currentAccData.ENMO, sizeof(currentAccData.ENMO));
     //former value was 15
+    #if CONFIG_LOG
+    static int last_accel_count = 0; 
+    if (global_counter - last_accel_count != 10) {
+      LOG_ERR("Detected accel global counter offset: %d", global_counter - last_accel_count);
+    }
+    last_accel_count = global_counter;
+    #endif
+    
     int16_t accel_and_gyro[15] = {dataReadAccX, dataReadAccY, dataReadAccZ};
 
-    memcpy(&accel_and_gyro[3], temp1[0].floatcast, sizeof(temp1[0].floatcast));
-    memcpy(&accel_and_gyro[5], temp1[1].floatcast, sizeof(temp1[1].floatcast));
-    memcpy(&accel_and_gyro[7], temp1[2].floatcast, sizeof(temp1[2].floatcast));
+    memcpy(&accel_and_gyro[3], float_cast_arr[0].floatcast, sizeof(float_cast_arr[0].floatcast));
+    memcpy(&accel_and_gyro[5], float_cast_arr[1].floatcast, sizeof(float_cast_arr[1].floatcast));
+    memcpy(&accel_and_gyro[7], float_cast_arr[2].floatcast, sizeof(float_cast_arr[2].floatcast));
 		  
     uint32_t current_time = get_current_unix_time();
 
@@ -786,6 +799,7 @@ void motion_data_timeout_handler(struct k_work *item)
 
     store_data(accel_and_gyro, sizeof(accel_and_gyro), 1);
 
+    
     // this function seperately fills blePktMotion with the desired size
     // TODO: Make sure packets are in correct size/order
     // ppg_bluetooth_fill(blePktMotion);
@@ -929,6 +943,7 @@ void magnetometer_config(void){
 
 void motion_config(void){
   LOG_INF("configuring imu..");
+
   if(gyroConfig.isEnabled){
     static uint8_t m_tx_buf[2] = {0xF5, SPI_FILL};	/**< TX buffer. */
     static uint8_t m_rx_buf[sizeof(m_tx_buf)];  /**< RX buffer. */

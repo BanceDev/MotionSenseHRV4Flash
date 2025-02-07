@@ -160,7 +160,7 @@ void create_test_file(int sectors){
 	char destination[50] = "";
 	int ID = 0;
 	struct fs_mount_t* mp = &fs_mnt;
-	char IDString[5];
+	char IDString[12];
 
 
 	struct fs_file_t test_file;
@@ -258,6 +258,7 @@ void sensor_write_to_file(const void* data, size_t size, enum sensor_type sensor
 		strcat(MSenseFile->file_name, IDString);
 		strcat(MSenseFile->file_name, ".bin");
 		//printk("file: %s \n", file_name); 
+		LOG_INF("Creating new file...");
 		int file_create = fs_open(&MSenseFile->self_file, MSenseFile->file_name, FS_O_CREATE | FS_O_WRITE);
 		if (file_create != 0){
 			LOG_WRN("Unable to create file");

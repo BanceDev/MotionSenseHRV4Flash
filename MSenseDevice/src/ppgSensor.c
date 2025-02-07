@@ -19,7 +19,7 @@ LOG_MODULE_REGISTER(ppg_sensor, CONFIG_LOG_LEVEL_PPG_COLLECTION);
 
 struct ppg_configData ppgConfig = {
     .isEnabled = true,
-    .sample_avg = PPG_SMP_AVE_16,
+    .sample_avg = PPG_SMP_AVE_8,
     .green_intensity = 0x30,
     .infraRed_intensity = 0x12,
 
@@ -43,7 +43,7 @@ const struct ppg_configData ppg_default_config = {
     .green_intensity = 0x28,
     .infraRed_intensity = 0x12,
     .sampling_time = 0x28,
-    .numCounts = 8,
+    .numCounts = 5,
     .txPacketEnable = false,
 };
 
@@ -642,18 +642,30 @@ void read_ppg_fifo_buffer(struct k_work *item)
     LOG_DBG("new ppg green intensity: %d\n", ppgConfig.green_intensity);
     LOG_DBG("new IR intensity: %d\n", ppgConfig.infraRed_intensity);
   }
-  for (int i = 0; i < sampleCount[2] / 4; i++){
-  ppg_packet_counter++;
-  ppg_samples[0] = led1A[i];
-  ppg_samples[1] = led1B[i];
-  ppg_samples[2] = led2A[i];
-  ppg_samples[3] = led2B[i];
-  ppg_samples[4] = get_current_unix_time();
-  ppg_samples[5] = global_counter;
-  if (sampleCount[2] != 1){
-    LOG_ERR("Samples in ppg got unexpected value: %d", sampleCount[2]);
-  }
-  store_data(ppg_samples, sizeof(ppg_samples), 0);
+  int number_of_samples = sampleCount[2] / 4;
+  #if CONFIG_LOG
+  static int last_ppg_count = 0;
+  
+  if (number_of_samples != 1){
+      LOG_ERR("Samples in ppg got unexpected value: %d", number_of_samples);
+    }
+    if (global_counter - last_ppg_count != 5) {
+      LOG_ERR("Detected ppg global counter offset: %d", global_counter - last_ppg_count);
+    }
+    last_ppg_count = global_counter;
+  #endif
+  // We divide by 4 because it represents the number of channels, 4, so we're reading 4 at a time.
+  for (int i = 0; i < number_of_samples; i++){
+    ppg_packet_counter++;
+    ppg_samples[0] = led1A[i];
+    ppg_samples[1] = led1B[i];
+    ppg_samples[2] = led2A[i];
+    ppg_samples[3] = led2B[i];
+    ppg_samples[4] = get_current_unix_time();
+    ppg_samples[5] = global_counter;
+    
+    store_data(ppg_samples, sizeof(ppg_samples), 0);
+    
   }
   //uint8_t test_fill_arr[4096] = {[0 ... 4095] = 1};
   //store_data(test_fill_arr, sizeof(test_fill_arr), 0);
