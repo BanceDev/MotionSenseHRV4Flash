@@ -793,7 +793,7 @@ void motion_data_timeout_handler(struct k_work *item)
 
     memcpy(&accel_and_gyro[9], &currentAccData.ENMO, sizeof(currentAccData.ENMO));
 
-    memcpy(&accel_and_gyro[11], &current_time, sizeof(current_time));
+    memcpy(&accel_and_gyro[11], &ticks, sizeof(current_time));
 
     memcpy(&accel_and_gyro[13], &global_counter, sizeof(global_counter));
 

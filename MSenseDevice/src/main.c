@@ -516,7 +516,7 @@ void main(void)
   // Setup our Flash Filesystem
   setup_disk();
   k_sleep(K_SECONDS(1));
-  create_test_files(10);
+  //create_test_files(10);
   #ifdef CONFIG_DEBUG  
   #if CONFIG_DISK_DRIVER_RAW_NAND
     set_read_only(true);
@@ -554,7 +554,7 @@ void main(void)
   ret = gpio_pin_configure(gpio0_device, LED1_PIN, GPIO_OUTPUT_INACTIVE | LED_FLAGS);
   ret = gpio_pin_configure(gpio1_device, PPG_POWER_PIN, GPIO_OUTPUT_ACTIVE | PPG_POWER_FLAGS);
   // initialize imu ground pin
-  ret = gpio_pin_configure(gpio0_device, 27, GPIO_OUTPUT_INACTIVE);
+  //ret = gpio_pin_configure(gpio0_device, 27, GPIO_OUTPUT_INACTIVE);
   if (ret < 0)
   {
     printk("Error: Can't initialize LED");
