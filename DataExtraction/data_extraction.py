@@ -184,26 +184,50 @@ def collect_all_data_by_prefix(path, prefix: str, labels: list[str], types: list
     total_errors = 0
 
     all_data = []
+    unix_times = []
     for element in range(len(labels)):
         all_data.append([])
+
     files = gather_files_by_prefix(prefix, path)
     if len(files) == 0:
         return
+
     for file in files:
         full_path = path + file
         print(full_path)
         test_file = open(full_path, "rb")
         data = test_file.read()
+
+        match = re.search(r'(\d{5})(ppg|ac)(\d{10})', file)
+        if match:
+            unix_time = int(match.group(3))  # Extract Unix time (10-digit)
+            file_type = match.group(2)  # Get 'ppg' or 'ac' from the filename
+        else:
+            unix_time = None
+            file_type = None
+        
+        if file_type == 'ppg':
+            time_increment = 0.015625  # 64Hz
+        elif file_type == 'ac':
+            time_increment = 0.03125  # 32Hz
+        else:
+            time_increment = 0  # Default to no increment if the file type is unrecognized
+
+        for _ in range(len(all_data[0])):
+            unix_times.append(unix_time)
+            unix_time += time_increment
+
         if len(data) != 0:
             total_errors += process_data(data, all_data, types)
         else:
-
             print("Warning: found empty file!")
 
     full_dict = {}
     for index in range(len(labels)):
         full_dict[labels[index]] = all_data[index]
 
+    # Add Unix time as a new column in the DataFrame
+    full_dict['Unix Time'] = unix_times
     dataset = pd.DataFrame(full_dict)
 
     return dataset
