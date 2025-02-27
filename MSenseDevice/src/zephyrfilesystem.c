@@ -268,6 +268,16 @@ void sensor_write_to_file(const void* data, size_t size, enum sensor_type sensor
 		if (res != 0){
 		LOG_WRN("failed to expand file");
 		}
+
+		// write unix time as first sample
+		uint64_t current_time = get_current_unix_time();
+		int total_written = fs_write(&MSenseFile->self_file, current_time, size);
+		MSenseFile->current_writes++;
+		if (total_written == size){
+			LOG_INF("sucessfully wrote to file for %d, bytes written = %i ! \n", sensor, total_written);
+			data_counter += total_written;
+		}
+		
 	}
 	else if (data_counter >= data_limit){
 		//memset(file_name, 0, sizeof(file_name));
